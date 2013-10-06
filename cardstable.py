@@ -23,6 +23,9 @@ class QGraphicsViewExtend(QGraphicsView):
         
 class CardGraphicsItem(QtSvg.QGraphicsSvgItem):
     """ Extends QtSvg.QGraphicsSvgItem for card items graphics """ 
+    valueToStr = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'}
+    strToValue = dict (zip(valueToStr.values(),valueToStr.keys()))
+    
     def __init__(self, name, ind, svgFile, player=0, faceDown=False, played=False):
         super(CardGraphicsItem, self).__init__(svgFile)
         # special properties
@@ -30,8 +33,7 @@ class CardGraphicsItem(QtSvg.QGraphicsSvgItem):
         self.ind = ind # index
         self.svgFile = svgFile # svg file for card graphics
         self.player = player # which player holds the card
-        self.faceDown = faceDown # does the card faceDown
-        self.anim = QPropertyAnimation(self, 'pos') # will use to animate card movement
+        self.faceDown = faceDown # does the card faceDown        
         self.played = played
         
         #default properties
@@ -52,24 +54,14 @@ class CardGraphicsItem(QtSvg.QGraphicsSvgItem):
     def getValue(self):        
         """ return card value in number, by their rank """
         if self.getSuit()=='j':
-            return 99
-        rank = self.getRank()
-        if rank == 'A':
-            value = 14
-        elif rank == 'K':
-            value = 13
-        elif rank == 'Q':
-            value = 12            
-        elif rank == 'J':
-            value = 11
-        else:
-            value = int(rank)        
-        return value            
+            return 99     
+        return self.strToValue[self.getRank()]
 
 
     def setPlayer(self, player):
         """ set player number """
         self.player = player
+
        
     def hoverEnterEvent(self, event):
         """ event when mouse enter a card """    
@@ -90,14 +82,21 @@ class CardGraphicsItem(QtSvg.QGraphicsSvgItem):
      
         
 class cardTableWidget(QWidget):     
-    """ main widget for handling the card table """
+    """ main widget for handling the card table """    
+    DEBUG = 3 # Debug level
+    svgCardsPath = "svg"
+    deckBackSVG = 'back_2'        
+    cardWidth = 200 # original card width in pixels
+    cardHeight = 250 # original card height in pixels    
+    defScale = 0.5  # default scale of card
+        
     def __init__(self, parent=None):
         super(QWidget, self).__init__(parent)       
         self.initUI()
 
         
     def initUI(self):
-        """ initialize the view-scene graphic environment """
+        """ initialize the view-scene graphic environment """        
         self.scene = QGraphicsScene()        
         self.scene.setSceneRect(QRectF(0,0,1280,720))
         self.view = QGraphicsViewExtend(self.scene)
@@ -111,15 +110,10 @@ class cardTableWidget(QWidget):
         self.setLayout(layout)        
         self.setBackgroundColor(QColor('green'))
         
-        # special properties
-        self.DEBUG = 3 # Debug level
-        self.svgCardsPath = "svg"
-        self.deckBackSVG = 'back_2'        
-        self.cardWidth = 200 # in pixels
-        self.cardHeight = 250 # in pixels
+        # special properties        
+
         #self.defInsertionPos = QPointF(0,0)
-        self.defAngle = 0
-        self.defScale = 0.5        
+       
 
 
     def getCenterPoint(self)        :
@@ -128,19 +122,11 @@ class cardTableWidget(QWidget):
         print(rect)
         return QPointF(rect.width()/2,rect.height()/2)       
 
+
     def sortCards(self,cards):        
-        """ sorting list of card names
-        just swap 'A' with 'Z', do simple python sort by name
-        and then return 'Z' to 'A'
-        """
-        for c in range(len(cards)): 
-            if cards[c].split("_")[1] == 'A':
-                cards[c] = cards[c].split("_")[0] + "_" + 'Z'        
-        sortCards = sorted(cards)        
-        for c in range(len(sortCards)):
-            if sortCards[c].split("_")[1] == 'Z':
-                sortCards[c] = sortCards[c].split("_")[0] + "_" + 'A'        
-        return sortCards
+        """ sorting list of card names by suit and value """
+        s = sorted(cards, key=lambda c: CardGraphicsItem.strToValue[c.split("_")[1]]) # sort on secondary key
+        return sorted(s, key=lambda c: c.split("_")[0]) # now sort on primary key
         
     
     def setBackgroundColor(self, color):

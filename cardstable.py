@@ -83,7 +83,7 @@ class CardGraphicsItem(QtSvg.QGraphicsSvgItem):
         
 class cardTableWidget(QWidget):     
     """ main widget for handling the card table """    
-    DEBUG = 3 # Debug level
+    DEBUG = 3 # Debug level    
     svgCardsPath = "svg"
     deckBackSVG = 'back_2'        
     cardWidth = 200 # original card width in pixels

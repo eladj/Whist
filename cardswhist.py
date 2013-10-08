@@ -4,13 +4,18 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 import cardstable
 from WhistAI import WhistAI
+from bid import BiddingDialog
 import random
-  
+
+class BidDialogExtend(BiddingDialog):
+    def __init__(self,AI_players, AIlevel, playerToBid):
+        super(BidDialogExtend, self).__init__(AI_players, AIlevel, playerToBid)
+   
+        
 class CardTableWidgetWhist(cardstable.cardTableWidget):
+    """ extension of CardTableWidget, for a Whist game """
+    AIlevel = 1    
     
-    AIlevel = 1
-    
-    """ extension of CardTableWidget """
     def __init__(self):
         super(CardTableWidgetWhist, self).__init__()                
         self.DEBUG = 1
@@ -23,6 +28,9 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         """ manage the game
         pass the play for human or AI player
         """
+        if self.bids[0] == '?':            
+            self.manageBidding()
+            return
         AI = self.playerAI[self.playerToPlay-1] 
         print("MANGAE GAME CALLED - Player %d" % self.playerToPlay)
         if AI == []: #if it's human player do nothing            
@@ -40,7 +48,22 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
            # play this card           
            self.cardPressed(cardsItems[cardsNames.index(cardToPlay)])
     
+    def postBidding(self):
+        print("postBidding")        
+        self.bids = self.bidDlg.finalBids
+        self.trump= self.bidDlg.finalTrump
+        self.paintScores()
+        QTimer.singleShot(200, self.manageGame) 
         
+    def manageBidding(self):
+        self.bidDlg = BidDialogExtend(self.playerAI, self.AIlevel, 
+                                      self.firstPlayerToBid)
+        self.bidDlg.finishedBidding.connect(self.postBidding) # when finished call manage game  
+        self.bidDlg.show()
+
+        #TODO -> when bidDlg closed-> emit signal with bids and trump -> run manageBidding()
+
+    
     def cardPressed(self, card):
         """ handles actions after selecting a card to play """
         if card.player is not self.playerToPlay: # makes sure this is this player turn
@@ -91,17 +114,17 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
             self.totalScore = [0,0,0,0]
         else:
             self.firstPlayerToBid += 1
+        self.firstPlayerToBid = 1 # TODO - delete !!!!
         self.handsArchive = [[]] #buffer to kepp 4 cards which played in hand        
         self.handsNameArchive = [[]] #buffer to kepp 4 cards which played in hand
         self.playerToPlay = 2 #the player turn to play
-        self.trump = 's' # the trump suit
-        self.bids = [2,2,0,0]
+        self.trump = None # the trump suit
+        self.bids = ['?','?','?','?']
         self.takes = [0,0,0,0]
         self.scene.clear() #clears all items from scene (cards&text)        
         self.paintTable()
         self.dealDeck()        
-        self.playerAI = [WhistAI(level=self.AIlevel, playerNum=1,
-                                 ownCards=[i.name for i in self.getCardsList(player=1)]),
+        self.playerAI = [[],
                          WhistAI(level=self.AIlevel, playerNum=2, 
                                  ownCards=[i.name for i in self.getCardsList(player=2)]),
                          WhistAI(level=self.AIlevel, playerNum=3, 
@@ -155,11 +178,11 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
     def paintScores(self):
         """ updates the text items for players names,bids,scores... 
         This method is called from paintTable - don't use it directly!
-        """        
+        """
         for n in range(4):            
             htmlText = "<font size=8>Player %d</font><br> \
-                        <font size=5>Bids: %d | Takes: %d<br>Score: %d</font>" % \
-                        ((n+1),self.bids[n],self.takes[n],self.totalScore[n])
+                        <font size=5>Bids: %s | Takes: %d<br>Score: %d</font>" % \
+                        ((n+1),str(self.bids[n]),self.takes[n],self.totalScore[n])
             self.textPlayers[n].setHtml(htmlText)                                        
 
     
@@ -190,7 +213,7 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         pos = event.pos() + QPoint(-10,-10) #cursor correction - don't know why
         item = self.view.itemAt(pos)                
         if isinstance(item,cardstable.CardGraphicsItem):            
-            self.cardPressed(item)        
+            self.cardPressed(item)                
         if self.DEBUG > 3:
             print("mousePressEvent: ",end="")
             print(event,end="")

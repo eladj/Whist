@@ -1,3 +1,4 @@
+from __future__ import print_function
 import random
 
 class WhistAI:
@@ -22,7 +23,7 @@ class WhistAI:
         #self.ownCards = ['d_2','d_3','s_7','c_K','c_A','d_K','d_A','h_6','h_10','s_J','s_5','s_8','s_5'] # own AI player cards
         #self.ownCards = ['c_2','c_3','c_5','d_2','d_4','d_J','h_7','h_9','h_J','s_3','s_5','s_8','s_10'] # own AI player cards        
         self.ownCards = ownCards
-        self.noTrumpBid = True
+        self.noTrumpBidAllowed = True #does no trump bid is allowed?
         self.cardsPlayed = [] #all the cards which were played
         self.bids = []  # the other people bids
         self.takes = [] # the other people takes
@@ -31,28 +32,32 @@ class WhistAI:
         self.cardsPlayed = cardsNames
         print(self.cardsPlayed)
         
-    def bid(self):
+    def bid(self, forcedTrump=None, notAlowedBid=None):
         """ Convert total score to bid """
-        
-        # collect all scores, for no trump and with trump        
-        scores = [self.handEvaluation(trump=None)]
-        for s in self.availabeSuits:
-            scores.append(self.handEvaluation(trump=s))
-
-        # select highest score            
-        ind = scores.index(max(scores))
-        if ind == 0:
-            selectedTrump = 'notrump'
-        else:
-            selectedTrump = self.availabeSuits[ind-1]
-            
-        if not(self.noTrumpBid) and ind == 0: #if notrump isn't allowed and selected
-            scores.pop(0)
+        if forcedTrump is None: #if trump is unknown, check all options and 
+                                      #selects the best trump which will maximize the total score
+            # collect all scores, for no trump and with trump        
+            scores = [self.handEvaluation(selectedTrump=None)]
+            for trumpIter in self.availabeSuits:
+                scores.append(self.handEvaluation(selectedTrump=trumpIter))
+    
+            # select highest score            
             ind = scores.index(max(scores))
-            selectedTrump = self.availabeSuits[ind]
-        
-        totalScore = scores[ind]    
-        print("Total Score = %d. Selected Trump = %s" % (totalScore,selectedTrump))
+            if ind == 0:
+                selectedTrump = 'notrump'
+            else:
+                selectedTrump = self.availabeSuits[ind-1]
+                
+            if not(self.noTrumpBidAllowed) and ind == 0: #if notrump bid isn't allowed and selected
+                scores.pop(0)
+                ind = scores.index(max(scores))
+                selectedTrump = self.availabeSuits[ind]
+            totalScore = scores[ind]    
+        else:
+            totalScore = self.handEvaluation(selectedTrump=forcedTrump)   
+            selectedTrump=forcedTrump
+            
+        print("Total Score = %d. Selected Trump = %s " % (totalScore,selectedTrump), end='')
         
         # convert score to bid
         if totalScore <= 5:
@@ -82,12 +87,20 @@ class WhistAI:
         if totalScore >= 37 and totalScore <= 38:
             bid = 12           
         if totalScore >= 39 :
-            bid = 13            
-        print("Bid = %d" % bid)            
+            bid = 13
+        
+        if notAlowedBid is not None:    # if this player cannot bid this value (probably because the sum of all bids is exactly 13)
+            print("bid = %d isn't allowed. " % bid,end="")
+            bid -= random.randrange(-1,2,2) # TODO - insert some sense here
+            if bid < 0 and notAlowedBid != 0:
+                bid = 0
+            if bid < 0 and notAlowedBid == 0:
+                bid = 1
+        print("Selected Bid = %d" % bid)            
         return bid, selectedTrump
             
             
-    def handEvaluation(self, trump=None):
+    def handEvaluation(self, selectedTrump=None):
         """ Evaluates the initial bidding (no trump)
         and the secondary (with trump selected).
         Summary:
@@ -148,8 +161,8 @@ class WhistAI:
             doubleton = 1 point
             Shortage points are added to HCP to give total points.            
             """
-            if trump is not None:
-                trumpCount = suitsCount[self.availabeSuits.index(trump)]
+            if selectedTrump is not None and selectedTrump is not 'notrump':
+                trumpCount = suitsCount[self.availabeSuits.index(selectedTrump)]
                 SP = 0
                 if trumpCount==3:
                     SP += suitsCount.count(0)*3 + suitsCount.count(1)*2 + suitsCount.count(2)*1
@@ -165,9 +178,9 @@ class WhistAI:
             #CC = valuesCount[14]*2 + valuesCount[13]*1
             
             """ SUM all scores """
-            if trump == 'notrump': #playing with no trump
+            if selectedTrump == 'notrump': #is selected trump = no trump
                 totalScore = HCP
-            if trump is None:  # before agreement on trump 
+            elif selectedTrump is None:  # before agreement on trump 
                 totalScore = HCP + LP
             else:    # after agreement on trump 
                 totalScore = HCP + SP

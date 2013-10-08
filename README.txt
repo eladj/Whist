@@ -1,14 +1,20 @@
-PyQt custom widget for creating card games
+Israeli Whist written in Python and PyQt
 
 This package contains the following classes:
 ============================================
-cardTableWidget
----------------
-inherits: QtGui.QWidget
-Description: A default area for creating the card game
+main.py
+-------
+Main file to run the game
 
-CardItem
---------
-inherits: QtSvg.QGraphicsSvgItem
-Description: A default card class that handles the graphics of the cards.
-All the cards are displayed in svg format, so they can be rescaled without damaging the resolution. 
+cardswhist.py
+-------------
+extension of cardstable.py, specific for a Whist game
+
+cardstable.py
+-------------
+General extension of QGraphicsScene, QGraphicsView and QGraphicsSVGItem 
+to build a python GUI for cards games.
+
+WhistAI.py
+----------
+Handles all the AI (bidding and playing)

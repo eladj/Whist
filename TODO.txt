@@ -1,6 +1,6 @@
+- don't use the PyQt Webkit (for rules) as it takes 15 MB
 - decide what AI do when total bids are 13
 - check that bidding is advancing 1 player each round
-- add graphicsItem to indicate current trump
 - improve AI for selecting a card to play
 - improve AI for bidding
 - add SuitNT image

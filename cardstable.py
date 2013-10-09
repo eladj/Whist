@@ -6,6 +6,7 @@ from PyQt4.QtGui  import *
 from PyQt4 import QtSvg
 import random
 
+path = "data"
 
 class QGraphicsViewExtend(QGraphicsView):
     """ extends QGraphicsView for resize event handling  """
@@ -88,7 +89,7 @@ class cardTableWidget(QWidget):
     deckBackSVG = 'back_2'        
     cardWidth = 200 # original card width in pixels
     cardHeight = 250 # original card height in pixels    
-    defScale = 0.5  # default scale of card
+    defScale = 0.6  # default scale of card
         
     def __init__(self, parent=None):
         super(QWidget, self).__init__(parent)       
@@ -142,7 +143,7 @@ class cardTableWidget(QWidget):
         for jokers name = 'j_r' or 'j_b'
         for back name = 'back_1', 'back_2', ...
         """
-        fn = os.path.join(self.svgCardsPath,name + ".svg")        
+        fn = os.path.join(path,self.svgCardsPath,name + ".svg")        
         return fn
 
             
@@ -281,30 +282,30 @@ class cardTableWidget(QWidget):
         return l
 
     
-    def dealDeck(self):
-        d = self.buildDeckList()        
-        random.shuffle(d)
-        print(d)
-        playerNum=1
-        n=1
-        c2=0
-        dx = [0,self.defHandSpacing,0,self.defHandSpacing]
-        dy = [self.defHandSpacing,0,self.defHandSpacing,0]        
-        x, y, ang = self.playersHandsPos[playerNum-1]
-        for card in d:            
-            self.addCard(card,player=playerNum)            
-            self.getCardsList()[0].setPos(x+dx[playerNum-1]*c2,
-                                           y+dy[playerNum-1]*c2)
-            self.getCardsList()[0].rotate(ang)
-            
-            if n % (52 / self.numOfPlayers) == 0:
-                playerNum += 1                
-                if playerNum > self.numOfPlayers:
-                    break
-                x, y, ang = self.playersHandsPos[playerNum-1]
-                c2=0
-            n += 1
-            c2 += 1        
+#    def dealDeck(self):
+#        d = self.buildDeckList()        
+#        random.shuffle(d)
+#        print(d)
+#        playerNum=1
+#        n=1
+#        c2=0
+#        dx = [0,self.defHandSpacing,0,self.defHandSpacing]
+#        dy = [self.defHandSpacing,0,self.defHandSpacing,0]        
+#        x, y, ang = self.playersHandsPos[playerNum-1]
+#        for card in d:            
+#            self.addCard(card,player=playerNum)            
+#            self.getCardsList()[0].setPos(x+dx[playerNum-1]*c2,
+#                                           y+dy[playerNum-1]*c2)
+#            self.getCardsList()[0].rotate(ang)
+#            
+#            if n % (52 / self.numOfPlayers) == 0:
+#                playerNum += 1                
+#                if playerNum > self.numOfPlayers:
+#                    break
+#                x, y, ang = self.playersHandsPos[playerNum-1]
+#                c2=0
+#            n += 1
+#            c2 += 1        
 
 
 

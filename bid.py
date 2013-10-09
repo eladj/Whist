@@ -119,7 +119,7 @@ class BiddingDialog(QWidget):
                self.applyBid2()
            else:
                print("Bid is illegal - player %d: bid=%d suit=%s"
-                       % (self.playerToBid,bid,selectedTrump))
+                       % (self.playerToBid,bid,selectedSuit))
                print("Total bidding sum cannot be exactly 13")
                bid = self.playerAI[self.playerToBid-1].bid(forcedTrump=selectedSuit,notAlowedBid=bid)
                self.bidValue.setValue(bid)                          

@@ -6,9 +6,11 @@ from PyQt4.QtWebKit import QWebView
 import sys
 import os
 from cardswhist import CardTableWidgetWhist
-        
+
+path = 'data'        
+
 class MainWindow(QMainWindow):
-    path = 'data'    
+        
     
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -43,7 +45,7 @@ class MainWindow(QMainWindow):
             
     def openRulesPopup(self):        
         self.w = rulesPopup()
-        stream = QFile(os.path.join(self.path,'rules.html'))
+        stream = QFile(os.path.join(path,'rules.html'))
         if stream.open(QFile.ReadOnly):
             self.w.setHtml(QString.fromUtf8(stream.readAll()))
             stream.close()
@@ -63,7 +65,7 @@ class AboutPopUP(QWidget):
         
     def initUI(self):
         pic = QLabel()           
-        pic.setPixmap(QPixmap("icon.png"))
+        pic.setPixmap(QPixmap(os.path.join(path,'icon.png')))
         text1 = QLabel()
         text1.setText(QString('PyWhist 0.1'))        
         text1.setAlignment(Qt.AlignCenter)

@@ -11,4 +11,6 @@
 #This also works:
 from distutils.core import setup
 import py2exe
-setup(windows=[{"script":"main.py"}], options={"py2exe":{"includes":["sip","PyQt4.QtCore","PyQt4.QtGui","PyQt4.QtNetwork"]}})
+setup(windows=[{"script":"main.py"}], 
+               options={"py2exe":{"includes":
+                   ["sip","PyQt4.QtCore","PyQt4.QtGui"]}})

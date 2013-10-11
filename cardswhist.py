@@ -14,8 +14,9 @@ class BidDialogExtend(BiddingDialog):
         
 class CardTableWidgetWhist(cardstable.cardTableWidget):
     """ extension of CardTableWidget, for a Whist game """
-    AIlevel = 1
-    animateFlag = True
+    AIlevel = 2
+    animateFlag = False
+    openGame = True
     
     def __init__(self):
         super(CardTableWidgetWhist, self).__init__()                
@@ -94,6 +95,10 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         self.bids = self.bidDlg.finalBids
         self.trump= self.bidDlg.finalTrump
         self.playerToPlay = self.bids.index(max(self.bids))+1
+        for p in range(4):
+            if self.playerAI[p] != []:
+                self.playerAI[p].trump = self.trump
+                self.playerAI[p].bids = self.bids                
         #self.paintScores()
         self.paintTable()
         QTimer.singleShot(200, self.manageGame) 
@@ -132,6 +137,8 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         print("player %d won the hand" % playerWonHand)          
         self.moveCardsToWinner(playerWonHand)
         self.takes[playerWonHand-1] += 1
+        if self.playerAI[playerWonHand-1] != []:
+            self.playerAI[playerWonHand-1].takes[playerWonHand-1] += 1
         self.playerToPlay = playerWonHand #player who won start the next
         #self.paintScores()        
         self.paintTable()
@@ -199,10 +206,13 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
                 else:
                     delta = QPointF(0, 12)
                 if p==0:
-                    delta = delta*3
+                    #delta = delta*3
                     faceDownFlag = False
                 else:
-                    faceDownFlag = False #TODO - Change back!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!11
+                    faceDownFlag = True
+                if self.openGame: #if selected to play open game
+                    delta = delta*2.4
+                    faceDownFlag = False                    
                 self.addCard(card, player=p+1, faceDown=faceDownFlag)
                 self.getCardsList()[0].setPos(self.handsPosition[p]+
                                               QPointF(delta)*n)
@@ -226,6 +236,7 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         """ handles the graphics of moving a selected card to the middle """
         center = QPointF(int(self.scene.width()//2-50),int(self.scene.height()//2-75))
         delta = (QPointF(0,80),QPointF(-80,0),QPointF(0,-80),QPointF(80,0))
+        self.anim2 = []
         self.anim2 = (QPropertyAnimation(card, "pos"))
         if self.animateFlag:
             if len(self.handsArchive[-1])==4:
@@ -234,28 +245,39 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
                 self.anim2.setDuration(150)
             #anim.setStartValue(self.pos())
             self.anim2.setEndValue(center+delta[card.player-1])            
-            self.anim2.start()            
+            QTimer.singleShot(0, self.anim2, SLOT("start()"))            
         else:
-            card.setPos(center+delta)            
-        if self.DEBUG > 3:
-            print("Card Played: " + card.name)
+            card.setPos(center+delta[card.player-1])            
 
 
     def moveCardsToWinner(self,player):
         """ handles the animation of moving a hand to the winner """
-        delta = (QPointF(0,300),QPointF(-300,0),QPointF(0,-300),QPointF(300,0))
+        delta = (QPointF(0,300),QPointF(-300,0),QPointF(0,-300),QPointF(300,0))        
         self.anim=[]
         for card in self.handsArchive[-1]:
-            self.anim.append(QPropertyAnimation(card, "pos"))
-            self.anim[-1].setDuration(300)
-            self.anim[-1].setEndValue(self.handsPosition[player-1]+delta[player-1])            
-            self.anim[-1].start()
-            #QTimer.singleShot(10, self.anim[-1], SLOT("start()"))
-            #QObject.connect(self.anim[-1], SIGNAL("finished()"), self.anim[-1], SLOT("deleteLater()"))             
+            if self.animateFlag:
+                self.anim.append(QPropertyAnimation(card, "pos"))
+                self.anim[-1].setDuration(300)
+                self.anim[-1].setEndValue(self.handsPosition[player-1]+delta[player-1])            
+                #self.anim[-1].start()
+                QTimer.singleShot(0, self.anim[-1], SLOT("start()"))
+                #QObject.connect(self.anim[-1], SIGNAL("finished()"), self.anim[-1], SLOT("deleteLater()"))
+            else:
+                card.setPos(self.handsPosition[player-1]+delta[player-1])
     
         
     def updateTotalScores(self):
         """ handles total score calculation in the end of the round """
+        #check if at least one succed
+        n = 0
+        for p in range(4):
+            if self.bids[p] == self.takes[p]:
+                n += 1
+        if n == 0:
+            print("no one took his bid. no change to scores")
+            return
+            
+        #check all
         for p in range(4):
             if self.bids[p]==0: #special case of bid=0
                 if sum(self.bids) > 13: # "over"

@@ -2,7 +2,6 @@
 from __future__ import print_function
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
-from PyQt4.QtWebKit import QWebView
 import sys
 import os
 from cardswhist import CardTableWidgetWhist
@@ -44,18 +43,12 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.centralWidget)
             
     def openRulesPopup(self):        
-        self.w = rulesPopup()
-        stream = QFile(os.path.join(path,'rules.html'))
-        if stream.open(QFile.ReadOnly):
-            self.w.setHtml(QString.fromUtf8(stream.readAll()))
-            stream.close()
-        #self.w.load(QUrl('qrc:/rules.html'))
-        #self.w.setGeometry(QRect(100, 100, 400, 200))
-        self.w.show()    
+         self.wRules = rulesPopup()
+         self.wRules.show()
         
     def openAboutPopup(self):        
-        self.w = AboutPopUP()
-        self.w.show()   
+        self.wAbout = AboutPopUP()
+        self.wAbout.show()   
         
 class AboutPopUP(QWidget):
             
@@ -67,7 +60,7 @@ class AboutPopUP(QWidget):
         pic = QLabel()           
         pic.setPixmap(QPixmap(os.path.join(path,'icon.png')))
         text1 = QLabel()
-        text1.setText(QString('PyWhist 0.1'))        
+        text1.setText(QString('PyWhist 0.1.2'))
         text1.setAlignment(Qt.AlignCenter)
         text1.setFont(QFont("times",pointSize=16, weight=1))
         text2 = QLabel()
@@ -96,9 +89,7 @@ class AboutPopUP(QWidget):
         vbox.addWidget(text3)
         vbox.addLayout(hbox)
         
-        self.setLayout(vbox)    
-           
-        
+        self.setLayout(vbox)            
         #self.setGeometry(300, 300, 300, 150)
         self.center()
         self.setWindowTitle('About PyWhist')    
@@ -109,15 +100,21 @@ class AboutPopUP(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-     
-class rulesPopup(QWebView):
-    def __init__(self):
-        QWebView.__init__(self)
-        self.loadFinished.connect(self._result_available)
 
-    def _result_available(self, ok):
-        frame = self.page().mainFrame()
-        print(unicode(frame.toHtml()).encode('utf-8'))
+class rulesPopup(QGraphicsView):
+    def __init__(self):
+        super(rulesPopup,self).__init__()
+        self.scene = QGraphicsScene()        
+        self.text = QGraphicsTextItem()
+        stream = QFile(os.path.join(path,'rules.html'))
+        if stream.open(QFile.ReadOnly):
+            self.text.setHtml(QString.fromUtf8(stream.readAll()))
+            stream.close()
+        self.text.setTextWidth(500)
+        self.scene.addItem(self.text)
+        self.setGeometry(200,200,550,500)
+        self.setScene(self.scene)
+        
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)

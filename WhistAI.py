@@ -7,12 +7,12 @@ class WhistAI:
         http://en.wikipedia.org/wiki/High_card_points
     
     """
-    DEBUG = 2
+    
     valueToStr = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'}
     strToValue = dict(zip(valueToStr.values(),valueToStr.keys()))
     availabeSuits = ('c','d','h','s')
     
-    def __init__(self, level = 1, playerNum=0, ownCards=[], trump=[]):
+    def __init__(self, level = 1, playerNum=0, ownCards=[]):
         """ Level of AI:
                 0 - random
                 1 - simple
@@ -26,28 +26,25 @@ class WhistAI:
         self.noTrumpBidAllowed = True #does no trump bid is allowed?
         self.cardsPlayed = [] #all the cards which were played
         self.bids = []  # the other people bids
-        self.takes = [0,0,0,0] # the other people takes
-        self.trump = trump
+        self.takes = [] # the other people takes
 
     def setCardsPlayed(self, cardsNames):
         self.cardsPlayed = cardsNames
-        
+        print(self.cardsPlayed)
         
     def bid(self, forcedTrump=None, notAlowedBid=None):
         """ Convert total score to bid """
         if forcedTrump is None: #if trump is unknown, check all options and 
                                       #selects the best trump which will maximize the total score
-            # collect all scores, for no trump and with trump                                
-            scores = []
-            for trumpIter in ('nt',) + self.availabeSuits:
+            # collect all scores, for no trump and with trump        
+            scores = [self.handEvaluation(selectedTrump=None)]
+            for trumpIter in self.availabeSuits:
                 scores.append(self.handEvaluation(selectedTrump=trumpIter))
-                if self.DEBUG > 0:
-                    print("AI>bid: score for trump=%s is %d" %(trumpIter,scores[-1]))
     
             # select highest score            
             ind = scores.index(max(scores))
             if ind == 0:
-                selectedTrump = 'nt'
+                selectedTrump = 'notrump'
             else:
                 selectedTrump = self.availabeSuits[ind-1]
                 
@@ -58,39 +55,39 @@ class WhistAI:
             totalScore = scores[ind]    
         else:
             totalScore = self.handEvaluation(selectedTrump=forcedTrump)   
-            selectedTrump=forcedTrump        
+            selectedTrump=forcedTrump
+            
+        print("Total Score = %d. Selected Trump = %s " % (totalScore,selectedTrump), end='')
         
         # convert score to bid
-        if totalScore == 0:
+        if totalScore <= 5:
             bid = 0
-        if totalScore >= 1  and totalScore <= 5:
+        if totalScore >= 6  and totalScore <= 9:
             bid = 1       
-        if totalScore >= 6 and totalScore <= 9:
+        if totalScore >= 10 and totalScore <= 12:
             bid = 2       
-        if totalScore >= 10 and totalScore <= 14:
+        if totalScore >= 13 and totalScore <= 15:
             bid = 3
-        if totalScore >= 15 and totalScore <= 18:
+        if totalScore >= 16 and totalScore <= 18:
             bid = 4
         if totalScore >= 19 and totalScore <= 21:
             bid = 5    
-        if totalScore >= 22 and totalScore <= 23:
+        if totalScore >= 22 and totalScore <= 24:
             bid = 6
-        if totalScore >= 24 and totalScore <= 27:
+        if totalScore >= 25 and totalScore <= 27:
             bid = 7
-        if totalScore >= 28 and totalScore <= 31:
+        if totalScore >= 28 and totalScore <= 30:
             bid = 8
-        if totalScore >= 32 and totalScore <= 34:
+        if totalScore >= 31 and totalScore <= 32:
             bid = 9
-        if totalScore >= 35 and totalScore <= 36:
+        if totalScore >= 33 and totalScore <= 34:
             bid = 10
-        if totalScore >= 37 and totalScore <= 37:
+        if totalScore >= 35 and totalScore <= 36:
             bid = 11            
-        if totalScore >= 38 and totalScore <= 38:
+        if totalScore >= 37 and totalScore <= 38:
             bid = 12           
-        if totalScore >= 39 and totalScore <= 90:
+        if totalScore >= 39 :
             bid = 13
-        if totalScore == 1000: # 0 bid
-            bid = 0
         
         if notAlowedBid is not None:    # if this player cannot bid this value (probably because the sum of all bids is exactly 13)
             print("bid = %d isn't allowed. " % bid,end="")
@@ -99,9 +96,7 @@ class WhistAI:
                 bid = 0
             if bid < 0 and notAlowedBid == 0:
                 bid = 1
-        if self.DEBUG > 0:    
-            print("AI>bid: (P%d) Selected Trump = %s, Selected Bid = %d" %
-                  (self.playerNum, selectedTrump,bid))
+        print("Selected Bid = %d" % bid)            
         return bid, selectedTrump
             
             
@@ -117,7 +112,6 @@ class WhistAI:
             When making a bid in notrump with intent to play, value high-card 
             points only.
         """
-            
         if self.level==0:
             return random.randrange(1,14,1)
             
@@ -134,7 +128,7 @@ class WhistAI:
             jack = 1 HCP        
             """
         
-            HCP = valuesCount[14]*4 + valuesCount[13]*3 + valuesCount[12]*2 + valuesCount[11]*1 # High Card Points
+            HCP = valuesCount[14]*4 + valuesCount[13]*3 + valuesCount[12]*2 + valuesCount[11]*1 # High Card Points            
 
             #Goren, Charles; Richard Pavlicek
             if valuesCount[14]==0: #if no Aces -> reducing 1 HCP
@@ -145,15 +139,17 @@ class WhistAI:
             
             # TODO - deducting one HCP for a singleton king, queen, or jack.
             
-            """ LP - Suit Length Points
-            gives bonus for suits with many cards
+            """ Suit Length Points
             5-card suit = 1 point
             6 card suit = 2 points
             7 card suit = 3 points ... etc.
             """
-
+            LP = 0
+            for s in suitsCount:
+                if s >= 5: # 5 cards or more from the same suit
+                    LP += s-4
             
-            """ SP - Suit Short Points       
+            """ Suit Short Points       
             When the supporting hand holds three trumps, shortness is valued as follows:
             void = 3 points
             singleton = 2 points
@@ -164,188 +160,63 @@ class WhistAI:
             singleton = 3 points
             doubleton = 1 point
             Shortage points are added to HCP to give total points.            
-            """            
-            if selectedTrump is not None and selectedTrump != 'nt':                
+            """
+            if selectedTrump is not None and selectedTrump is not 'notrump':
                 trumpCount = suitsCount[self.availabeSuits.index(selectedTrump)]
-                LP = 0
-                if trumpCount >= 5:
-                    LP = trumpCount - 4
                 SP = 0
                 if trumpCount==3:
                     SP += suitsCount.count(0)*3 + suitsCount.count(1)*2 + suitsCount.count(2)*1
                 if trumpCount>=4:
                     SP += suitsCount.count(0)*5 + suitsCount.count(1)*3 + suitsCount.count(2)*1    
-                if self.DEBUG > 0:
-                    print("AI>handEvaluation: LP=%d, SP=%d" %(LP, SP))
             
-            """ ZP - Zero Points - Check for very low cards, for zero bid """            
-            ZP = valuesCount[2]*4 + valuesCount[3]*3 + valuesCount[4]*2 + valuesCount[5]*1 # very low Card Points, for zero bid
-            if selectedTrump is not None and selectedTrump != 'nt':
-                if trumpCount > 4: #if more than 4 trump cards, can't bid 0
-                    ZP = 0
-                
+            """ Controls Count
+            The control count is the sum of the controls where aces are valued 
+            as two controls, kings as one control and queens and jacks as zero.
+            This control count can be used as "tie-breakers" for hands 
+            evaluated as marginal by their HCP count
+            """
+            #CC = valuesCount[14]*2 + valuesCount[13]*1
+            
             """ SUM all scores """
-            if selectedTrump == 'nt': #is selected trump = no trump
+            if selectedTrump == 'notrump': #is selected trump = no trump
                 totalScore = HCP
+            elif selectedTrump is None:  # before agreement on trump 
+                totalScore = HCP + LP
             else:    # after agreement on trump 
-                totalScore = HCP + LP + SP
-            
-            if ZP > 15 and totalScore < 5: #decide to bid 0            
-                if self.DEBUG > 0:
-                    print("AI>handEvaluation: ZP = %d > 15 and totalScore < 5, decided to bid 0" % (ZP))
-                totalScore = 1000
-                
-            if self.DEBUG > 0:
-                print("AI>handEvaluation: total Score=%d " %(totalScore))
+                totalScore = HCP + SP
             
         return totalScore       
     
-    def playCard(self):               
-        listCardsValue = self.cardsOrderByValue()
-        cardsOnTable = self.cardsPlayed[-1]         
-        cardsAllowed = []        
-        if cardsOnTable == []: # if no one played yet this round            
-            leadSuit = []            
-            cardsAllowed = self.ownCards
-            cardsToWin = self.ownCards
-            cardsToLose = []
-            highestCardOnTable = []
-        else:
-            leadSuit = cardsOnTable[0].split("_")[0]
-            cardsOnTableRelevant = []
-            for c in cardsOnTable: # check which cards is relevant (lead suit)
-                if c.split("_")[0] == leadSuit or c.split("_")[0] == self.trump:
-                    cardsOnTableRelevant.append(c)
-            highestCardOnTable = self.highestCard(cardsOnTableRelevant)
-            for cardName in self.ownCards: # find all the allowed cards
-               if cardName.split("_")[0] == leadSuit:
-                   cardsAllowed.append(cardName)
-            if cardsAllowed == []: #if no leadSuit, all cards available
-                cardsAllowed = self.ownCards
-            cardsToWin = []
-            cardsToLose = []            
-            for c in cardsAllowed: #check which of the cards allowed will win or lose
-                print(listCardsValue.index(c)," < ? >", listCardsValue.index(highestCardOnTable))
-                if listCardsValue.index(c) > listCardsValue.index(highestCardOnTable):
-                    cardsToWin.append(c)
-                else:
-                    cardsToLose.append(c)
-                 
-        ownTakes = self.takes[self.playerNum-1]        
-        takesMissing = self.bids[self.playerNum-1] - ownTakes
-        if self.DEBUG > 0:
-            print("takesMissing",takesMissing)
-            print("bids",self.bids)
-            print("Cards Allowed",cardsAllowed)
-            print("highest Card on Table",highestCardOnTable)
-            print("Cards to Win",cardsToWin)
-            print("Cards to Lose",cardsToLose) 
-        
-        #print("AI (Player %d): played Cards - " % (self.playerNum,str(self.cardsPlayed)))        
-        if self.level == 0:
-            if cardsOnTable == []: # if no one played yet this round
-                print("AI(P%d)>playCard: first to play this hand" % self.playerNum)
+    def playCard(self):        
+        #print("AI (Player %d): played Cards - " % (self.playerNum,str(self.cardsPlayed)))
+        print("AI (Player %d): Own Hand - %s" % (self.playerNum,str(self.ownCards)))
+        if self.level >= 0:
+            if self.cardsPlayed[-1] == []: # if no one played yet this round
+                print("AI (Player %d): first to play this hand" % self.playerNum)
                 i = random.randrange(len(self.ownCards))
                 selectedCard = self.ownCards[i]
-            else:                                    
-                i = random.randrange(len(cardsAllowed))
-                selectedCard = cardsAllowed[i] 
-                print("AI(P%d)>playCard: Allowed Cards - %s" % (self.playerNum,str(cardsAllowed)))
-                
-        if self.level >= 1: 
-            if takesMissing > 0: #try to take                                
-                if cardsToWin == []: #if no cards to win
-                    selectedCard = self.lowestCard(cardsToLose) #select the lowest card to lose with                    
-                else:
-                    if len(cardsOnTable)==3: #if final, chose the lowest card that will give win
-                        selectedCard = self.lowestCard(cardsToWin)
-                    else:
-                        selectedCard = self.highestCard(cardsToWin)
-            elif takesMissing <= 0: #try to lose with the highest losing card
-                if cardsToLose == []: #if no cards to win
-                    selectedCard = self.lowestCard(cardsToWin) #select the lowest card to lose with                    
-                else:
-                    selectedCard = self.highestCard(cardsToLose)
-
-        if self.level >= 2:
-            underGameFlag = sum(self.bids) < 13
-            if takesMissing > 0: #try to take
-                if cardsToWin == []: #if no cards to win
-                    selectedCard = self.lowestCard(cardsToLose) #select the lowest card to lose with                    
-                else:
-                    if len(cardsOnTable)==3: #if final, chose the lowest card that will give win
-                        if underGameFlag:
-                            selectedCard = self.highestCard(cardsToWin)
-                        else:
-                            selectedCard = self.lowestCard(cardsToWin)                        
-                    else:
-                        if underGameFlag:
-                            i = random.randrange(len(cardsAllowed))
-                            selectedCard = cardsAllowed[i]
-                        else:
-                            selectedCard = self.highestCard(cardsToWin)
-
-            elif takesMissing <= 0: #try to lose with the highest losing card
-                if cardsToLose == []: #if no cards to win
-                    selectedCard = self.lowestCard(cardsToWin) #select the lowest card to lose with                    
-                else:
-                    selectedCard = self.highestCard(cardsToLose)
-
-            
-        if self.DEBUG > 0: 
-            print("AI(P%d)>playCard: Own Hand - %s" % (self.playerNum,str(self.ownCards)))                  
-            print("AI(P%d)>playCard: selectedCard = %s" % (self.playerNum, selectedCard))
+            else:
+               currentRound = self.cardsPlayed[-1]
+               leadSuit = currentRound[0].split("_")[0]
+               cardsAllowed = []
+               for cardName in self.ownCards: # find all the allowed cards
+                   if cardName.split("_")[0] == leadSuit:
+                       cardsAllowed.append(cardName)               
+               if cardsAllowed == []: # if player doesn't have cards from the lead suit
+                  print("AI (Player %d): Doesn\'t have lead suit %s" % (self.playerNum,leadSuit))
+                  print("AI (Player %d): Allowed Cards - %s" % (self.playerNum,str(self.ownCards)))
+                  i = random.randrange(len(self.ownCards))
+                  selectedCard = self.ownCards[i] 
+               else: # if player has cards from the lead suit
+                  print("AI (Player %d): Allowed Cards - %s" % (self.playerNum,str(cardsAllowed)))
+                  i = random.randrange(len(cardsAllowed))
+                  selectedCard = cardsAllowed[i]         
+        print("AI (Player %d): selectedCard = %s" % (self.playerNum, selectedCard))
         return selectedCard
-    
-    
-    def cardsOrderByValue(self):        
-        """ gives a list of all cards by their value (including trump factor) """
-        suitsNoTrump = list(self.availabeSuits)
-        if self.trump != 'nt':
-            suitsNoTrump.remove(self.trump)
-        listOut = []
-        for rank in self.valueToStr.values(): #iterate all ranks
-            for suit in suitsNoTrump:
-                listOut.append(suit + "_" + rank)
-        if self.trump != 'nt':
-            for rank in self.valueToStr.values(): #iterate all ranks            
-                listOut.append(self.trump + "_" + rank)
-        return listOut   
-
-    def lowestCard(self,cardsList):
-        """ returns the index of the highest card (including trump factor) """
-        cardsByValue = self.cardsOrderByValue()
-        minInd = len(cardsByValue)
-        lowestCard = cardsList[0]
-        for c in cardsList:
-            if cardsByValue.index(c) < minInd:
-                minInd = cardsByValue.index(c)
-                lowestCard = c
-        return lowestCard
-    
-    def highestCard(self,cardsList):
-        """ returns the index of the highest card (including trump factor) """
-        cardsByValue = self.cardsOrderByValue()
-        maxInd = 0
-        highestCard = cardsList[0]
-        for c in cardsList:
-            if cardsByValue.index(c) > maxInd:
-                maxInd = cardsByValue.index(c)
-                highestCard = c
-        return highestCard
-    
-    def cards2SuitAndValue(self,cardsList):
-        suits = []
-        values = []
-        for card in cardsList:
-            suits.append(card.split("_")[0])
-            values.append(self.strToValue[card.split("_")[1]])
-        return suits, values
     
     def removeCardFromOwn(self,cardName):
         """ removes card from ownCards list """
         self.ownCards.pop(self.ownCards.index(cardName))
-
           
 if __name__ == "__main__":
     whistGame = WhistAI(level=1)

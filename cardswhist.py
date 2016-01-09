@@ -14,9 +14,7 @@ class BidDialogExtend(BiddingDialog):
         
 class CardTableWidgetWhist(cardstable.cardTableWidget):
     """ extension of CardTableWidget, for a Whist game """
-    AIlevel = 2
-    animateFlag = False
-    openGame = True
+    AIlevel = 1    
     
     def __init__(self):
         super(CardTableWidgetWhist, self).__init__()                
@@ -26,41 +24,11 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         self.animTimer.setInterval(1500)
         self.animTimer.setSingleShot(True)
 
-
-    def newGame(self,newRound=False):
-        """ handles new game and new round """
-        if not newRound:
-            self.firstPlayerToBid = random.randrange(1,5,1)
-            self.totalScore = [0,0,0,0]
-        else:
-            self.firstPlayerToBid += 1
-            if self.firstPlayerToBid == 5:
-                self.firstPlayerToBid = 1        
-        self.handsArchive = [[]] #buffer to kepp 4 cards which played in hand        
-        self.handsNameArchive = [[]] #buffer to kepp 4 cards which played in hand        
-        self.trump = None # the trump suit
-        self.bids = ['?','?','?','?']
-        self.takes = [0,0,0,0]
-        self.textPlayers = []
-        self.scene.clear() #clears all items from scene (cards&text)        
-        self.paintTable()
-        self.dealDeck()        
-        self.playerAI = [[],
-                         WhistAI(level=self.AIlevel, playerNum=2, 
-                                 ownCards=[i.name for i in self.getCardsList(player=2)]),
-                         WhistAI(level=self.AIlevel, playerNum=3, 
-                                 ownCards=[i.name for i in self.getCardsList(player=3)]),
-                         WhistAI(level=self.AIlevel, playerNum=4, 
-                                 ownCards=[i.name for i in self.getCardsList(player=4)])] #insert AI players        
-        #self.playerAI = [[],[],[],[]]
-        QTimer.singleShot(100, self.manageGame)
-
-
     def manageGame(self):
         """ manage the game
         pass the play for human or AI player
         """
-        if self.bids[0] == '?':  #if no bidding was yet set          
+        if self.bids[0] == '?':            
             self.manageBidding()
             return
         AI = self.playerAI[self.playerToPlay-1] 
@@ -72,42 +40,34 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
            #TODO - block user mouse events
            # call AI to select card            
            AI.setCardsPlayed(self.handsNameArchive)
-           cardToPlay = AI.playCard()           
+           cardToPlay = AI.playCard()
+           AI.removeCardFromOwn(cardToPlay)
            # find card item that match that card name
            cardsItems = self.getCardsList()
            cardsNames = [i.name for i in cardsItems]           
            # play this card           
            self.cardPressed(cardsItems[cardsNames.index(cardToPlay)])
-           AI.removeCardFromOwn(cardToPlay)
     
-        
-    def manageBidding(self):
-        """ calls the bidding dialog """
-        self.bidDlg = BidDialogExtend(self.playerAI, self.AIlevel, 
-                                      self.firstPlayerToBid)
-        self.bidDlg.finishedBidding.connect(self.postBidding) # when finished call postBidding  
-        self.bidDlg.show()
-
-
     def postBidding(self):
-        """ called after the bidding window closes. """
         print("postBidding")        
         self.bids = self.bidDlg.finalBids
         self.trump= self.bidDlg.finalTrump
-        self.playerToPlay = self.bids.index(max(self.bids))+1
-        for p in range(4):
-            if self.playerAI[p] != []:
-                self.playerAI[p].trump = self.trump
-                self.playerAI[p].bids = self.bids                
-        #self.paintScores()
-        self.paintTable()
+        self.paintScores()
         QTimer.singleShot(200, self.manageGame) 
+        
+    def manageBidding(self):
+        self.bidDlg = BidDialogExtend(self.playerAI, self.AIlevel, 
+                                      self.firstPlayerToBid)
+        self.bidDlg.finishedBidding.connect(self.postBidding) # when finished call manage game  
+        self.bidDlg.show()
+
+        #TODO -> when bidDlg closed-> emit signal with bids and trump -> run manageBidding()
 
     
     def cardPressed(self, card):
         """ handles actions after selecting a card to play """
         if card.player is not self.playerToPlay: # makes sure this is this player turn
-            return                        
+            return            
         if not self.checkIfMoveLegal(card):
             print("Illegal move. player %d cannot play %s" % 
                   (card.player, card.name))
@@ -118,7 +78,7 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         self.handsNameArchive[-1].append(card.name)
         card.played = True
         if len(self.handsArchive[-1])==4:
-            QTimer.singleShot(1000, self.handleEndOfHand)
+            QTimer.singleShot(1200, self.handleEndOfHand)
         else:
             print("cardPressed calling manageGame")            
             if self.playerToPlay == 4:
@@ -137,24 +97,61 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
         print("player %d won the hand" % playerWonHand)          
         self.moveCardsToWinner(playerWonHand)
         self.takes[playerWonHand-1] += 1
-        if self.playerAI[playerWonHand-1] != []:
-            self.playerAI[playerWonHand-1].takes[playerWonHand-1] += 1
         self.playerToPlay = playerWonHand #player who won start the next
-        #self.paintScores()        
-        self.paintTable()
+        self.paintScores()        
         self.handsArchive.append([])
         self.handsNameArchive.append([])
         if sum(self.takes)==13: # if round is finished
-            self.updateTotalScores()
+            self.updateScores()
             self.newGame(newRound=True)
         else:
-            QTimer.singleShot(10, self.manageGame) # call for manageGame
-                    
+            QTimer.singleShot(500, self.manageGame) # call for manageGame
+            
+
+    def newGame(self,newRound=False):
+        if not newRound:
+            self.firstPlayerToBid = random.randrange(1,5,1)
+            self.totalScore = [0,0,0,0]
+        else:
+            self.firstPlayerToBid += 1
+        self.firstPlayerToBid = 1 # TODO - delete !!!!
+        self.handsArchive = [[]] #buffer to kepp 4 cards which played in hand        
+        self.handsNameArchive = [[]] #buffer to kepp 4 cards which played in hand
+        self.playerToPlay = 2 #the player turn to play
+        self.trump = None # the trump suit
+        self.bids = ['?','?','?','?']
+        self.takes = [0,0,0,0]
+        self.scene.clear() #clears all items from scene (cards&text)        
+        self.paintTable()
+        self.dealDeck()        
+        self.playerAI = [[],
+                         WhistAI(level=self.AIlevel, playerNum=2, 
+                                 ownCards=[i.name for i in self.getCardsList(player=2)]),
+                         WhistAI(level=self.AIlevel, playerNum=3, 
+                                 ownCards=[i.name for i in self.getCardsList(player=3)]),
+                         WhistAI(level=self.AIlevel, playerNum=4, 
+                                 ownCards=[i.name for i in self.getCardsList(player=4)])] #insert AI players        
+        #self.playerAI = [[],[],[],[]]
+        QTimer.singleShot(100, self.manageGame)         
+        
+#    def newRound(self):
+#        """  """
+#        self.updateScores()
+#        self.handsArchive = [[]] #buffer to kepp 4 cards which played in hand        
+#        self.handsNameArchive = [[]] #buffer to kepp 4 cards which played in hand        
+#        self.trump = 's' # the trump suit
+#        self.bids = [2,2,0,0]
+#        self.takes = [0,0,0,0]        
+#        #self.paintScores()
+#        self.scene.clear() #clears all items from scene (cards&text)        
+#        self.paintTable()
+#        self.dealDeck()
        
+    
     def paintTable(self):
-        """ paint the table graphics 
-        updates the text items for players names,bids,scores... 
-        """        
+        """ paint the table graphics """
+        self.animateFlag = True
+        self.defScale = 0.6
         self.sideMargin = 70        
         self.topMargin = 50        
         #pen = QPen("black")
@@ -169,30 +166,27 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
                              self.handsPosition[1]+QPointF(0,-100),
                              self.handsPosition[2]+QPointF(280,40),
                              self.handsPosition[3]+QPointF(-30,-100))        
-        #font =  QFont("Cursive", 18, QFont.Bold)
+        #font =  QFont("Cursive", 18, QFont.Bold)                                     
+        self.textPlayers = [[],[],[],[]]
+        for n in range(4):
+            self.textPlayers[n] = QGraphicsTextItem()                              
+            self.scene.addItem(self.textPlayers[n])
+            self.scene.items()[0].setPos(self.textPosition[n])
+            #self.textPlayers[n].setFont(font)
+        self.paintScores() 
 
-        if self.textPlayers == []:        
-            self.textPlayers = [[],[],[],[]]        
-            for n in range(4):
-                self.textPlayers[n] = QGraphicsTextItem()
-                self.scene.addItem(self.textPlayers[n])
-                self.scene.items()[0].setPos(self.textPosition[n])
-                #self.textPlayers[n].setFont(font)
-            self.textTrump = QGraphicsTextItem()        
-            #self.textTrump.setHtml("<font size=8>Trump: %s</font>" % self.trump)
-            self.textTrump.setPos(QPointF(0,20))
-            self.scene.addItem(self.textTrump)    
-        else:
-            self.textTrump.setHtml("<font size=4>Trump: %s</font>" % self.trump)
-            for n in range(4):            
-                htmlText = "<font size=8>Player %d</font><br> \
-                            <font size=5>Bids: %s | Takes: %d<br>Score: %d</font>" % \
-                            ((n+1),str(self.bids[n]),self.takes[n],self.totalScore[n])
-                self.textPlayers[n].setHtml(htmlText)                              
+    def paintScores(self):
+        """ updates the text items for players names,bids,scores... 
+        This method is called from paintTable - don't use it directly!
+        """
+        for n in range(4):            
+            htmlText = "<font size=8>Player %d</font><br> \
+                        <font size=5>Bids: %s | Takes: %d<br>Score: %d</font>" % \
+                        ((n+1),str(self.bids[n]),self.takes[n],self.totalScore[n])
+            self.textPlayers[n].setHtml(htmlText)                                        
 
     
     def dealDeck(self):
-        """ Creates the card graphics item and position them  """
         d = self.buildDeckList()        
         random.shuffle(d)
         delta = 25        
@@ -206,37 +200,29 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
                 else:
                     delta = QPointF(0, 12)
                 if p==0:
-                    #delta = delta*3
+                    delta = delta*3
                     faceDownFlag = False
                 else:
-                    faceDownFlag = True
-                if self.openGame: #if selected to play open game
-                    delta = delta*2.4
-                    faceDownFlag = False                    
+                    faceDownFlag = True #TODO - Change back!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!11
                 self.addCard(card, player=p+1, faceDown=faceDownFlag)
                 self.getCardsList()[0].setPos(self.handsPosition[p]+
-                                              QPointF(delta)*n)
+                                              QPointF(delta)*n)                
                 n+=1
                                 
     def mousePressEvent(self, event):
-        """ handles what happen when user clicks the mouse """
         pos = event.pos() + QPoint(-10,-10) #cursor correction - don't know why
         item = self.view.itemAt(pos)                
         if isinstance(item,cardstable.CardGraphicsItem):            
-            if self.playerAI[item.player-1] == []: # makes sure this is human player            
-                self.cardPressed(item)                
+            self.cardPressed(item)                
         if self.DEBUG > 3:
             print("mousePressEvent: ",end="")
             print(event,end="")
             print(" pos=",end="")
             print(pos)
-
         
     def moveCardToCenter(self,card):
-        """ handles the graphics of moving a selected card to the middle """
         center = QPointF(int(self.scene.width()//2-50),int(self.scene.height()//2-75))
         delta = (QPointF(0,80),QPointF(-80,0),QPointF(0,-80),QPointF(80,0))
-        self.anim2 = []
         self.anim2 = (QPropertyAnimation(card, "pos"))
         if self.animateFlag:
             if len(self.handsArchive[-1])==4:
@@ -245,39 +231,26 @@ class CardTableWidgetWhist(cardstable.cardTableWidget):
                 self.anim2.setDuration(150)
             #anim.setStartValue(self.pos())
             self.anim2.setEndValue(center+delta[card.player-1])            
-            QTimer.singleShot(0, self.anim2, SLOT("start()"))            
+            self.anim2.start()            
         else:
-            card.setPos(center+delta[card.player-1])            
-
+            card.setPos(center+delta)            
+        if self.DEBUG > 3:
+            print("Card Played: " + card.name)
 
     def moveCardsToWinner(self,player):
-        """ handles the animation of moving a hand to the winner """
-        delta = (QPointF(0,300),QPointF(-300,0),QPointF(0,-300),QPointF(300,0))        
+        delta = (QPointF(0,300),QPointF(-300,0),QPointF(0,-300),QPointF(300,0))
         self.anim=[]
         for card in self.handsArchive[-1]:
-            if self.animateFlag:
-                self.anim.append(QPropertyAnimation(card, "pos"))
-                self.anim[-1].setDuration(300)
-                self.anim[-1].setEndValue(self.handsPosition[player-1]+delta[player-1])            
-                #self.anim[-1].start()
-                QTimer.singleShot(0, self.anim[-1], SLOT("start()"))
-                #QObject.connect(self.anim[-1], SIGNAL("finished()"), self.anim[-1], SLOT("deleteLater()"))
-            else:
-                card.setPos(self.handsPosition[player-1]+delta[player-1])
+            self.anim.append(QPropertyAnimation(card, "pos"))
+            self.anim[-1].setDuration(300)
+            self.anim[-1].setEndValue(self.handsPosition[player-1]+delta[player-1])            
+            self.anim[-1].start()
+            #QTimer.singleShot(10, self.anim[-1], SLOT("start()"))
+            #QObject.connect(self.anim[-1], SIGNAL("finished()"), self.anim[-1], SLOT("deleteLater()"))             
     
         
-    def updateTotalScores(self):
+    def updateScores(self):
         """ handles total score calculation in the end of the round """
-        #check if at least one succed
-        n = 0
-        for p in range(4):
-            if self.bids[p] == self.takes[p]:
-                n += 1
-        if n == 0:
-            print("no one took his bid. no change to scores")
-            return
-            
-        #check all
         for p in range(4):
             if self.bids[p]==0: #special case of bid=0
                 if sum(self.bids) > 13: # "over"

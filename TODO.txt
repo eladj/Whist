@@ -1,6 +1,8 @@
-- don't use the PyQt Webkit (for rules) as it takes 15 MB
+- fix bug: block user mouse events while AI turn. when playing fast some weird bug occurs
+- bug: somehow player_1 html files end up in the desktop
 - decide what AI do when total bids are 13
 - check that bidding is advancing 1 player each round
+- add graphicsItem to indicate current trump
 - improve AI for selecting a card to play
 - improve AI for bidding
 - add SuitNT image

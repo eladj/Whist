@@ -2,17 +2,16 @@
 from __future__ import print_function
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
+from PyQt4.QtWebKit import QWebView
 import sys
 import os
 from cardswhist import CardTableWidgetWhist
-
-path = 'data'        
-
-class MainWindow(QMainWindow):
         
+class MainWindow(QMainWindow):
+    path = 'data'    
     
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super().__init__(parent)
 
         # create widgets
         self.cardsTable = CardTableWidgetWhist()        
@@ -43,28 +42,41 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.centralWidget)
             
     def openRulesPopup(self):        
-         self.wRules = rulesPopup()
-         self.wRules.show()
+        html_file = os.path.join(self.path,'rules.html')
+        self.w = QWebView()
+        self.w.load(QUrl.fromLocalFile(os.path.abspath(html_file)))
+        self.w.show()    
         
     def openAboutPopup(self):        
-        self.wAbout = AboutPopUP()
-        self.wAbout.show()   
-        
-class AboutPopUP(QWidget):
+        self.w = AboutPopup()
+        self.w.show()   
+
+class SettingsPopup(QWidget):
             
     def __init__(self):
-        super(AboutPopUP, self).__init__()
+        super().__init__()
+        self.initUI()    
+
+    def initUI(self):
+        text1 = QLabel()
+        text1.setText("AI Level")
+        
+        
+class AboutPopup(QWidget):
+            
+    def __init__(self):
+        super().__init__()
         self.initUI()
         
     def initUI(self):
         pic = QLabel()           
-        pic.setPixmap(QPixmap(os.path.join(path,'icon.png')))
+        pic.setPixmap(QPixmap("icon.png"))
         text1 = QLabel()
-        text1.setText(QString('PyWhist 0.1.2'))
+        text1.setText('PyWhist 0.1')
         text1.setAlignment(Qt.AlignCenter)
         text1.setFont(QFont("times",pointSize=16, weight=1))
         text2 = QLabel()
-        text2.setText(QString(u'Copyright © 2013, Elad Joseph'))        
+        text2.setText(u'Copyright © 2013, Elad Joseph')
         text2.setAlignment(Qt.AlignCenter)        
         text3 = QTextEdit()
         with open ("LICENSE.txt", "r") as myfile:
@@ -89,7 +101,9 @@ class AboutPopUP(QWidget):
         vbox.addWidget(text3)
         vbox.addLayout(hbox)
         
-        self.setLayout(vbox)            
+        self.setLayout(vbox)    
+           
+        
         #self.setGeometry(300, 300, 300, 150)
         self.center()
         self.setWindowTitle('About PyWhist')    
@@ -100,21 +114,6 @@ class AboutPopUP(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-
-class rulesPopup(QGraphicsView):
-    def __init__(self):
-        super(rulesPopup,self).__init__()
-        self.scene = QGraphicsScene()        
-        self.text = QGraphicsTextItem()
-        stream = QFile(os.path.join(path,'rules.html'))
-        if stream.open(QFile.ReadOnly):
-            self.text.setHtml(QString.fromUtf8(stream.readAll()))
-            stream.close()
-        self.text.setTextWidth(500)
-        self.scene.addItem(self.text)
-        self.setGeometry(200,200,550,500)
-        self.setScene(self.scene)
-        
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)

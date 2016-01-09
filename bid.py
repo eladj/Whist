@@ -11,8 +11,8 @@ class BiddingDialog(QWidget):
     
     index2SuitName = {4:'No Trump', 3:'Spades', 2:'Hearts', 1:'Diamonds', 0:'Clubs'}
     index2ImgName = {4:"SuitNT.png", 3:"SuitSpades.svg", 2:"SuitHearts.svg", 1:"SuitDiamonds.svg", 0:"SuitClubs.svg"}
-    suit2Index = {'nt':4, 's':3, 'h':2,'d':1, 'c':0}        
-    Name2Char = {'No Trump':'nt', 'Spades':'s','Hearts':'h', 'Diamonds':'d', 'Clubs':'c'}
+    suit2Index = {'notrump':4, 's':3, 'h':2,'d':1, 'c':0}        
+    Name2Char = {'No Trump':'notrump', 'Spades':'s','Hearts':'h', 'Diamonds':'d', 'Clubs':'c'}
     
     finishedBidding = pyqtSignal()
     
@@ -33,14 +33,14 @@ class BiddingDialog(QWidget):
 
     def initUI(self):        
         self.pic = QLabel()           
-        self.pic.setPixmap(QPixmap(os.path.join(self.path,'SuitNT.png')))
+        self.pic.setPixmap(QPixmap("icon.png"))        
         text1 = QLabel()
-        text1.setText(QString('First bidding - select trump'))
+        text1.setText('First bidding - select trump')
         text1.setAlignment(Qt.AlignCenter)
         text1.setFont(QFont("times",pointSize=16, weight=1))
         self.text1 = text1
         text2 = QLabel()
-        text2.setText(QString('Place Your Bid:'))        
+        text2.setText('Place Your Bid:')        
         text2.setAlignment(Qt.AlignLeft)
         text2.setFont(QFont("times",pointSize=12, weight=-1))
         self.text2 = text2
@@ -74,11 +74,6 @@ class BiddingDialog(QWidget):
         hbox2.addWidget(bidValue)
         hbox2.addWidget(bidSuit)
 
-        hbox3 = QHBoxLayout()
-        hbox3.addStretch(1)
-        hbox3.addWidget(self.pic)
-        hbox3.addStretch(1)
-        
         vbox = QVBoxLayout()
         #vbox.addStretch(1)        
         vbox.addWidget(self.text1)        
@@ -87,7 +82,7 @@ class BiddingDialog(QWidget):
         vbox.addLayout(hbox2)
         vbox.addStretch(1)
         vbox.addLayout(hbox)
-        vbox.addLayout(hbox3)
+        vbox.addWidget(self.pic)
         vbox.addWidget(self.bidsTextList)
         
         self.setLayout(vbox)    
@@ -123,12 +118,12 @@ class BiddingDialog(QWidget):
                print("player %d is applying bid" % self.playerToBid)
                self.applyBid2()
            else:
-               #print("Bid is illegal - player %d: bid=%d suit=%s"
-               #        % (self.playerToBid,bid,selectedSuit))
-               #print("Total bidding sum cannot be exactly 13")
-               bid, tmp = self.playerAI[self.playerToBid-1].bid(forcedTrump=selectedSuit,notAlowedBid=bid)
+               print("Bid is illegal - player %d: bid=%d suit=%s"
+                       % (self.playerToBid,bid,selectedTrump))
+               print("Total bidding sum cannot be exactly 13")
+               bid = self.playerAI[self.playerToBid-1].bid(forcedTrump=selectedSuit,notAlowedBid=bid)
                self.bidValue.setValue(bid)                          
-               #print("player %d is applying bid" % self.playerToBid)
+               print("player %d is applying bid" % self.playerToBid)
                self.applyBid2()       
 
 
@@ -148,28 +143,31 @@ class BiddingDialog(QWidget):
         """ check if bid is legal for the second round of bidding (trump
         has been decided)
         """
+        print("checkIfBidLegal2: ",bid,self.bids2Archive)
+        print("self.bids2Archive.count([])",self.bids2Archive.count([]))
         if self.bids2Archive.count([]) == 1: # if it is the last player
             totalBids = 0
             for b in self.bids2Archive:
                 if b != []:
                     totalBids += b
+            print("totalBids+bid", totalBids + bid) 
             if totalBids + bid == 13: # total sum cannot be 13
                 return False
         return True
         
         
     def addBidToList(self,player, bid, trump):
-        """ adds items to the text list """
         if bid == -100: #pass
             self.bidsTextList.addItem("Player %d: pass" % player)
         else:
             self.bidsTextList.addItem("Player %d: %d %s" % (player,bid,trump))
-        self.bidsTextList.scrollToBottom()
                 
 
     def applyPass(self):        
         self.bidsArchive[self.playerToBid-1] = -100
-        self.addBidToList(self.playerToBid,-100,-100) #pass        
+        self.addBidToList(self.playerToBid,-100,-100) #pass
+        print("Player %d: passed" % self.playerToBid)
+        
         if self.bidsArchive.count([]) == 0:  # if all players placed bet
             if sum(self.bidsArchive) < -201: # only if 3 players already pass
                 self.finishBidding1() # finish first round of bidding -> select Trump
@@ -180,6 +178,8 @@ class BiddingDialog(QWidget):
                 self.playerToBid = 1
             if self.bidsArchive[self.playerToBid-1] != -100:
                 break
+        print("Next Player to Bid: %d" % self.playerToBid)
+        print("applyPass->self.bidsArchive",self.bidsArchive)
         self.manageBids()
         
         
@@ -191,7 +191,6 @@ class BiddingDialog(QWidget):
                 item.setText("You cannot bid less than the maximum bid")
                 item.setForeground(Qt.red)
                 self.bidsTextList.addItem(item)
-                self.bidsTextList.scrollToBottom()
                 print("You cannot bid less than the maximum bid")                     
                 return
         self.addBidToList(self.playerToBid, self.bidValue.value(), 
@@ -206,6 +205,8 @@ class BiddingDialog(QWidget):
             if (self.bidsArchive[self.playerToBid-1] != -100) or \
                (self.bidsArchive[self.playerToBid-1] == []):
                 break
+        print("Next Player to Bid: %d" % self.playerToBid)
+        print("applyBid->self.bidsArchive",self.bidsArchive)
         self.manageBids()
         #self.deleteLater()
 
@@ -217,18 +218,20 @@ class BiddingDialog(QWidget):
                 item.setText("Sum of bids cannot be exactly 13")            
                 item.setForeground(Qt.red)
                 self.bidsTextList.addItem(item)
-                self.bidsTextList.scrollToBottom()                
+                print("Sum of bids cannot be 13")                     
                 return                                 
         self.bids2Archive[self.playerToBid-1] = self.bidValue.value()
         self.addBidToList(self.playerToBid, self.bidValue.value(), 
-                          self.index2SuitName[self.bidSuit.currentIndex()])        
+                          self.index2SuitName[self.bidSuit.currentIndex()])
+        print("applyBid2: ",self.bids2Archive)                     
         if self.bids2Archive.count([]) == 0:
             self.finishBidding2()
             return
         else:
             self.playerToBid += 1
             if self.playerToBid == 5:
-                self.playerToBid = 1        
+                self.playerToBid = 1
+        print("applyBid2: next player to bid: player %d" % self.playerToBid)                     
         self.manageBids2()
  
            
@@ -244,8 +247,8 @@ class BiddingDialog(QWidget):
         item2.setForeground(Qt.green)        
         self.bidsTextList.addItem(item)
         self.bidsTextList.addItem(item2)
-        self.text1.setText(QString('Second bidding - %s' % 
-            self.index2SuitName[self.maxBidSuit]))
+        self.text1.setText('Second bidding - %s' % 
+            self.index2SuitName[self.maxBidSuit])
         self.pic.setPixmap(QPixmap(os.path.join(self.path,self.index2ImgName[self.maxBidSuit])))
         self.bidSuit.setCurrentIndex(self.maxBidSuit)
         self.bidSuit.setEnabled(False)
@@ -261,12 +264,9 @@ class BiddingDialog(QWidget):
         item.setText("Bidding finished")            
         item.setForeground(Qt.green)
         self.bidsTextList.addItem(item)
-        self.bidValue.setEnabled(False)
-        self.text1.setText("Press Start Round")
-        self.bidButton.setText("Start Round")
+        self.bidButton.setText("Close")
         self.bidButton.clicked.disconnect(self.applyBid2)
         self.bidButton.clicked.connect(self.close)
-        self.bidButton.setFocus()
         #TODO - something that will pass this value
         self.finalBids = self.bids2Archive
         self.finalTrump = self.Name2Char[self.index2SuitName[self.maxBidSuit]]
